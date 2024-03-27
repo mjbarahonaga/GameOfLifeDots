@@ -26,14 +26,17 @@ public class GameManager : MonoBehaviour
         public override void Bake(GameManager authoring)
         {
             authoring._configData = GetEntity(authoring ,TransformUsageFlags.None);
+            var entity = GetEntity(authoring._prefabCell, TransformUsageFlags.Dynamic);
+            //AddBuffer<CellState>(entity);
             AddComponent(authoring._configData, new ConfigGame
             {
-                Prefab = GetEntity(authoring._prefabCell, TransformUsageFlags.Dynamic),
+                Prefab = entity,
                 GridSize = authoring._gridSize,
                 CellSize = authoring._cellSize,
                 CellAliveColor = (Vector4)authoring._cellAliveColor,
                 CellDeadColor = (Vector4)authoring._cellDeadColor
             });
+            
         }
     }
 

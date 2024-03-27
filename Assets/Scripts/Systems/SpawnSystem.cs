@@ -10,18 +10,16 @@ using Random = Unity.Mathematics.Random;
 using Unity.Mathematics;
 using UnityEngine;
 
-[UpdateBefore(typeof(TransformSystemGroup))]
+//[UpdateBefore(typeof(TransformSystemGroup))]
 public partial struct SpawnSystem : ISystem
 {
     private Random _random;
     private NativeArray<Entity> _cells;
-    private EntityCommandBuffer _ecb;
+    
     public void OnCreate(ref SystemState state)
     {
         state.RequireForUpdate<ConfigGame>();
         _random = new Random((uint)(float)System.DateTime.Now.TimeOfDay.TotalMilliseconds);
-
-
     }
 
     public void OnDestroy(ref SystemState state)
@@ -33,15 +31,15 @@ public partial struct SpawnSystem : ISystem
     public void OnUpdate(ref SystemState state)
     {
         
-        if (!Input.GetKeyDown(KeyCode.S))
-        {
-            return;
-        }
+        //if (!Input.GetKeyDown(KeyCode.S))
+        //{
+        //    return;
+        //}
 
-        if (_cells.Length != 0)
-        {
-            state.EntityManager.DestroyEntity(_cells);
-        }
+        //if (_cells.Length != 0)
+        //{
+        //    state.EntityManager.DestroyEntity(_cells);
+        //}
 
         state.Enabled = false;
 
@@ -97,6 +95,9 @@ public partial struct SpawnSystem : ISystem
 
         state.Dependency.Complete();
 
+        var system = state.WorldUnmanaged.GetExistingSystemState<CheckNeighbords>();
+        system.Enabled = true;
+
         //entities.Dispose();
     }
 
@@ -110,9 +111,10 @@ public partial struct SpawnSystem : ISystem
         public URPMaterialPropertyBaseColor aliveColor;
         public URPMaterialPropertyBaseColor deadColor;
 
-        private void Execute([EntityIndexInQuery] int index, ref CellState cell, ref URPMaterialPropertyBaseColor color, ref LocalTransform transform)
+        private void Execute([EntityIndexInQuery] int index, ref Cell cell, ref URPMaterialPropertyBaseColor color, ref LocalTransform transform)
         {
             cell.IsAlive = random.NextBool();
+            cell.Index = index;
             color.Value = cell.IsAlive ? aliveColor.Value : deadColor.Value;
             ushort x = (ushort)(index % gridSize);
             ushort y = (ushort)(index / gridSize);

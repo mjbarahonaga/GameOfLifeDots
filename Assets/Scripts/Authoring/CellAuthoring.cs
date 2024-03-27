@@ -9,8 +9,12 @@ public class CellAuthoring : MonoBehaviour
     {
         public override void Bake(CellAuthoring authoring)
         {
-            Entity entity = GetEntity(authoring, TransformUsageFlags.Renderable);
-            AddComponent(entity, new CellState());
+            Entity entity = GetEntity(TransformUsageFlags.Dynamic);
+            //AddComponent(entity, new CellPrefabs() { CellPrefab = GetEntity(authoring._prefabCell, TransformUsageFlags.Renderable)});
+            AddComponent(entity, new Cell());
+            //AddBuffer<CellBuffer>(entity);
+
         }
     }
 }
+
