@@ -157,7 +157,7 @@ MonoBehaviour:
   _cellAliveColor: {r: 0, g: 1, b: 0.9137255, a: 1}
   _cellDeadColor: {r: 0, g: 0, b: 0, a: 1}
   _cellSize: 0.1
-  _gridSize: 32
+  _gridSize: 1000
   _isRunning: 0
 --- !u!4 &1761480940
 Transform:

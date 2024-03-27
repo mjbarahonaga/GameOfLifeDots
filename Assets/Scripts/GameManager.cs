@@ -26,7 +26,7 @@ public class GameManager : MonoBehaviour
         public override void Bake(GameManager authoring)
         {
             authoring._configData = GetEntity(authoring ,TransformUsageFlags.None);
-            var entity = GetEntity(authoring._prefabCell, TransformUsageFlags.Dynamic);
+            var entity = GetEntity(authoring._prefabCell, TransformUsageFlags.Renderable);
             //AddBuffer<CellState>(entity);
             AddComponent(authoring._configData, new ConfigGame
             {

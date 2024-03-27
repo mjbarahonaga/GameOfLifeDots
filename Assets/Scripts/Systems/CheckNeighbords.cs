@@ -7,9 +7,12 @@ using Unity.VisualScripting;
 using UnityEngine;
 
 [UpdateInGroup(typeof(LateSimulationSystemGroup))]
-public partial struct CheckNeighbords : ISystem
+public partial struct CheckNeighbords : ISystem, ISystemStartStop
 {
-
+    int gridSize;
+    int totalSize;
+    NativeArray<bool> cellsFutureState;
+    NativeArray<bool> cellsCurrentState;
     public void OnCreate(ref SystemState state)
     {
         //state.RequireForUpdate<CellBuffer>();
@@ -17,45 +20,38 @@ public partial struct CheckNeighbords : ISystem
         //state.Enabled = false;
         state.RequireForUpdate<Cell>();
     }
-
-    public void OnDestroy(ref SystemHandle state)
+    private void OnDestroy(ref SystemState state)
     {
+        cellsFutureState.Dispose();
+        cellsCurrentState.Dispose();
+    }
+
+    public void OnStartRunning(ref SystemState state)
+    {
+        var config = SystemAPI.GetSingleton<ConfigGame>();
+        gridSize = config.GridSize;
+        totalSize = gridSize * gridSize;
+
+        cellsFutureState = CollectionHelper.CreateNativeArray<bool>(totalSize, Allocator.Persistent);
+        cellsCurrentState = CollectionHelper.CreateNativeArray<bool>(totalSize, Allocator.Persistent);
+    }
+
+
+    public void OnStopRunning(ref SystemState state)
+    {
+        
     }
 
     [BurstCompile]
     public void OnUpdate(ref SystemState state)
     {
-        var config = SystemAPI.GetSingleton<ConfigGame>();
-        int gridSize = config.GridSize;
-        int totalSize = gridSize * gridSize;
+        
 
-        var cellsFutureState = CollectionHelper.CreateNativeArray<bool>(totalSize, state.WorldUpdateAllocator);
-        var cellsCurrentState = CollectionHelper.CreateNativeArray<bool>(totalSize, state.WorldUpdateAllocator);
-        //var cells = SystemAPI.GetSingletonBuffer<CellBuffer>();
-
-        //var entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
-        //NativeArray<Entity> entities = entityManager.GetAllEntities(Allocator.Temp);
-        //_cellbuffers = entityManager.GetBuffer<CellBuffer>(config.Prefab);
-        //_cellbuffers.Length = totalSize;
-        ////_cellbuffers = entityManager.GetBuffer<CellBuffer>(config.Prefab);
-        //foreach (Entity entity in entities)
-        //{
-        //    if (entityManager.HasComponent<CellBuffer>(entity))
-        //    {
-        //        DynamicBuffer<CellBuffer> cellbuffer = entityManager.GetBuffer<CellBuffer>(entity);
-
-        //        _cellbuffers.Insert(cellbuffer[0].Index, cellbuffer[0]);
-        //    }
-        //}
-
-
-
-        //var nativeCells = cells.AsNativeArray();
 
         var fillStates = new FillCurrentState
         {
             CellsCurrentState = cellsCurrentState,
-        }.Schedule(state.Dependency);
+        }.ScheduleParallel(state.Dependency);
         fillStates.Complete();
 
         var checkNeighbords = new NeightbordsJob
@@ -64,25 +60,24 @@ public partial struct CheckNeighbords : ISystem
             TotalSize = totalSize,
             cellsCurrentState = cellsCurrentState.AsReadOnly(),
             CellsFutureState = cellsFutureState
-        }.Schedule(state.Dependency);
+        }.ScheduleParallel(state.Dependency);
         checkNeighbords.Complete();
 
         var changeState = new ChangeStateCellsJob
         {
             CellsFutureState = cellsFutureState.AsReadOnly(),
             //CellsBuffer = _cellbuffers,
-        }.Schedule(state.Dependency);
+        }.ScheduleParallel(state.Dependency);
         changeState.Complete();
 
         //nativeCells.Dispose();
-        cellsFutureState.Dispose();
-        cellsCurrentState.Dispose();
+
     }
 
     [BurstCompile]
-    partial struct FillCurrentState : IJobEntity
+    partial  struct FillCurrentState : IJobEntity
     {
-        public NativeArray<bool> CellsCurrentState;
+        [NativeDisableParallelForRestriction][WriteOnly] public NativeArray<bool> CellsCurrentState;
         public void Execute(in Cell cell)
         {
             CellsCurrentState[cell.Index] = cell.IsAlive;
@@ -92,10 +87,10 @@ public partial struct CheckNeighbords : ISystem
     [BurstCompile]
     partial struct NeightbordsJob : IJobEntity
     {
-        public int GridSize;    //Same size Row and Collums
-        public int TotalSize;
+        [ReadOnly] public int GridSize;    //Same size Row and Collums
+        [ReadOnly] public int TotalSize;
         [ReadOnly] public NativeArray<bool>.ReadOnly cellsCurrentState;
-        [WriteOnly] public NativeArray<bool> CellsFutureState;
+        [NativeDisableParallelForRestriction][WriteOnly] public NativeArray<bool> CellsFutureState;
 
         public void Execute([EntityIndexInQuery] int index, in Cell cell)
         {
